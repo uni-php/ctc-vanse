@@ -1,0 +1,11 @@
+export const ACCESS_TOKEN = 'AccessToken'
+export const USER_ID = 'userId'
+export const USER_INFO = 'userInfo'
+export const AUTH_INFO = 'authInfo'
+export const OPENID = 'openid'
+export const DEPTLIST= 'deptlist'
+export const PLATFORM = 'platform'
+export const PASSWORD = 'password'
+export const ACCOUNT = 'account'
+export const STORE_INFO = 'storeInfo'
+

@@ -1,0 +1,477 @@
+<template>
+  <div class="app-container">
+    <el-row >
+      <!--用户数据-->
+      <el-col :span="24" :xs="24">
+        <el-form :model="queryParams" ref="queryForm" :inline="true" v-show="showSearch" label-width="68px">
+          <el-form-item label="用户名称" prop="username">
+            <el-input
+              v-model="queryParams.username"
+              placeholder="请输入用户名称"
+              clearable
+              size="small"
+              style="width: 240px"
+              @keyup.enter.native="handleQuery"
+            />
+          </el-form-item>
+          <el-form-item label="账号" prop="account">
+            <el-input
+              v-model="queryParams.account"
+              placeholder="请输入账号"
+              clearable
+              size="small"
+              style="width: 240px"
+              @keyup.enter.native="handleQuery"
+            />
+          </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-select
+              v-model="queryParams.status"
+              placeholder="用户状态"
+              clearable
+              size="small"
+              style="width: 240px"
+            >
+              <el-option
+                v-for="dict in userOptions"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+            <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-row :gutter="10" class="mb8">
+          <el-col :span="1.5">
+            <el-button
+              type="primary"
+              plain
+              icon="el-icon-plus"
+              size="mini"
+              @click="handleAdd"
+            >新增</el-button>
+          </el-col>
+          <el-col :span="1.5">
+            <el-button
+              type="success"
+              plain
+              icon="el-icon-edit"
+              size="mini"
+              :disabled="single"
+              @click="handleUpdate"
+            >修改</el-button>
+          </el-col>
+          <el-col :span="1.5">
+            <el-button
+              type="danger"
+              plain
+              icon="el-icon-delete"
+              size="mini"
+              :disabled="multiple"
+              @click="handleDelete"
+            >删除</el-button>
+          </el-col>
+        </el-row>
+
+        <el-table v-loading="loading" :data="userList" @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="50" align="center" />
+          <el-table-column label="用户编号" align="center"  prop="id"  />
+          <el-table-column label="用户姓名" align="center"  prop="username" :show-overflow-tooltip="true" />
+          <el-table-column label="用户账号" align="center"  prop="account"  :show-overflow-tooltip="true" />
+          <el-table-column label="备注" align="center"  prop="remark"  :show-overflow-tooltip="true" />
+          <el-table-column label="状态" align="center"  >
+            <template slot-scope="scope">
+              <el-switch
+                v-model="scope.row.status"
+                active-value="1"
+                inactive-value="0"
+                @change="handleStatusChange(scope.row)"
+              ></el-switch>
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间" align="center" prop="createTime"  width="160">
+            <template slot-scope="scope">
+              <span>{{ parseTime(scope.row.create_time) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            align="center"
+            width="160"
+            class-name="small-padding fixed-width"
+          >
+            <template slot-scope="scope" v-if="scope.row.uid !== 1">
+              <el-button
+                size="mini"
+                type="text"
+                icon="el-icon-edit"
+                @click="handleUpdate(scope.row)"
+              >修改</el-button>
+              <el-button
+                size="mini"
+                type="text"
+                icon="el-icon-delete"
+                @click="handleDelete(scope.row)"
+              >删除</el-button>
+              <el-dropdown size="mini" @command="(command) => handleCommand(command, scope.row)">
+                <span class="el-dropdown-link">
+                  <i class="el-icon-d-arrow-right el-icon--right"></i>更多
+                </span>
+                <el-dropdown-menu slot="dropdown">
+                  <el-dropdown-item command="handleResetPwd" icon="el-icon-key"
+                    >重置密码</el-dropdown-item>
+                </el-dropdown-menu>
+              </el-dropdown>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <pagination
+          v-show="total>0"
+          :total="total"
+          :page.sync="queryParams.pageNum"
+          :limit.sync="queryParams.pageSize"
+          @pagination="getList"
+        />
+      </el-col>
+    </el-row>
+
+    <!-- 添加或修改参数配置对话框 -->
+    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
+      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="用户姓名" prop="username">
+              <el-input v-model="form.username" placeholder="请输入用户姓名" maxlength="30" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="角色" prop="roleIds">
+              <el-select v-model="form.roleIds" collapse-tags multiple placeholder="请选择">
+                <el-option
+                  v-for="item in roleOptions"
+                  :key="item.roleId"
+                  :label="item.roleName"
+                  :value="item.roleId"
+                  :disabled="item.status == 1"
+                ></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="账号" prop="account">
+              <el-input v-model="form.account" autocomplete=“off” placeholder="请输入用户账号" maxlength="30"/>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item v-if="!form.id" label="用户密码" prop="password">
+              <el-input :disabled="form.id != undefined" v-model="form.password" placeholder="请输入用户密码" type="password" maxlength="20" show-password/>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-radio-group v-model="form.status">
+                <el-radio
+                  v-for="dict in userOptions"
+                  :key="dict.value"
+                  :label="dict.value"
+                >{{dict.label}}</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="备注">
+              <el-input v-model="form.remark" type="textarea" placeholder="请输入内容"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import { listUser, getUser, delUser, addUser, updateUser, resetUserPwd, changeUserStatus, } from "@/api/system/user/member.js";
+import { getToken } from "@/utils/auth";
+import Treeselect from "@riophae/vue-treeselect";
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+
+export default {
+  name: "User",
+  components: { Treeselect },
+  data() {
+    return {
+      // 遮罩层
+      loading: true,
+      // 导出遮罩层
+      exportLoading: false,
+      // 选中数组
+      ids: [],
+      // 非单个禁用
+      single: true,
+      // 非多个禁用
+      multiple: true,
+      // 显示搜索条件
+      showSearch: true,
+      // 总条数
+      total: 0,
+      // 用户表格数据
+      userList: null,
+      // 弹出层标题
+      title: "",
+      // 部门树选项
+      deptOptions: undefined,
+      // 是否显示弹出层
+      open: false,
+      // 部门名称
+      deptName: undefined,
+      // 默认密码
+      initPassword: '123456',
+      // 日期范围
+      dateRange: [],
+      // 角色选项
+      roleOptions: [],
+      // 表单参数
+      form: {},
+      userOptions:[
+          {
+              value:"1",
+              label:'正常'
+          },
+          {
+              value:"0",
+              label:'停用'
+          }
+      ],
+      sexOptions:[
+        {
+              value:"0",
+              label:'男'
+          },
+          {
+              value:"1",
+              label:'女'
+          },
+          {
+              value:"3",
+              label:'未知'
+          }
+      ],
+      defaultProps: {
+        children: "children",
+        label: "label"
+      },
+      // 用户导入参数
+      upload: {
+        // 是否显示弹出层（用户导入）
+        open: false,
+        // 弹出层标题（用户导入）
+        title: "",
+        // 是否禁用上传
+        isUploading: false,
+        // 是否更新已经存在的用户数据
+        updateSupport: 0,
+        // 设置上传的请求头部
+        headers: { Authorization: "Bearer " + getToken() },
+        // 上传的地址
+        url: process.env.VUE_APP_BASE_API + "/system/user/importData"
+      },
+      // 查询参数
+      queryParams: {
+        pageNum: 1,
+        pageSize: 10,
+        username: '',
+        account: '',
+        status: '',
+      },
+      // 表单校验
+      rules: {
+        username: [
+          { required: true, message: "用户姓名不能为空", trigger: "blur" }
+        ],
+        roleIds:[
+          { required: true, message: "请选择用户角色", trigger: "blur" }
+        ],
+        account:[
+           { required: true, message: "用户账号不能为空", trigger: "blur" },
+           { min: 5, max: 20, message: '用户账号长度必须介于 5 和 20 之间', trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: "用户密码不能为空", trigger: "blur" },
+          { min: 5, max: 20, message: '用户密码长度必须介于 5 和 20 之间', trigger: 'blur' }
+        ],
+      }
+    };
+  },
+  created() {
+    this.getList();
+  },
+  methods: {
+    /** 查询用户列表 */
+    getList() {
+      this.loading = true;
+      listUser(this.queryParams).then(response => {
+          this.userList = response.rows;
+          this.total = response.total;
+          this.loading = false;
+        }
+      );
+    },
+    // 用户状态修改
+    handleStatusChange(row) {
+      let text = row.status === "0" ? "停用" : "启用";
+      this.$confirm('确认要"' + text + '""' + row.username + '"用户吗?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          return changeUserStatus({id:row.id, status:row.status});
+        }).then(() => {
+          this.$message.success(text + "成功")
+        }).catch(function() {
+          row.status = row.status === "0" ? "1" : "0";
+        });
+    },
+    // 取消按钮
+    cancel() {
+      this.open = false;
+      this.reset();
+    },
+    // 表单重置
+    reset() {
+      this.form = {
+        uid: undefined,
+        username: undefined,
+        account:undefined,
+        password: undefined,
+        status: "0",
+        remark: undefined,
+        roleIds: []
+      };
+      this.resetForm("form");
+    },
+    /** 搜索按钮操作 */
+    handleQuery() {
+      this.queryParams.pageNum = 1;
+      this.getList();
+    },
+    /** 重置按钮操作 */
+    resetQuery() {
+      this.dateRange = [];
+      this.resetForm("queryForm");
+      this.handleQuery();
+    },
+    // 多选框选中数据
+    handleSelectionChange(selection) {
+      this.ids = selection.map(item => item.uid);
+      this.single = selection.length != 1;
+      this.multiple = !selection.length;
+    },
+    // 更多操作触发
+    handleCommand(command, row) {
+      switch (command) {
+        case "handleResetPwd":
+          this.handleResetPwd(row);
+          break;
+        default:
+          break;
+      }
+    },
+    /** 新增按钮操作 */
+    handleAdd() {
+      this.reset();
+      getUser({}).then(response => {
+        this.roleOptions = response.roles;
+        this.open = true;
+        this.form.status='1'
+        this.title = "添加用户";
+        this.form.account=undefined
+        this.form.password = this.initPassword;
+      });
+    },
+    /** 修改按钮操作 */
+    handleUpdate(row) {
+      this.reset();
+      const userId = row.id;
+      getUser({id:userId}).then(response => {
+        this.form = response.data;
+        this.roleOptions = response.roles;
+        this.form.roleIds = response.data.roleIds.split(",").map(Number)
+        this.open = true;
+        this.title = "修改用户";
+      });
+    },
+    /** 重置密码按钮操作 */
+    handleResetPwd(row) {
+      this.$prompt('请输入"' + row.username + '"的新密码', "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        closeOnClickModal: false,
+        inputPattern: /^.{5,20}$/,
+        inputErrorMessage: "用户密码长度必须介于 5 和 20 之间",
+      }).then(({ value }) => {
+          resetUserPwd({id:row.id, password:value}).then(response => {
+            this.$message.success("修改成功，新密码是：" + value)
+          });
+        }).catch(() => {});
+    },
+    /** 提交按钮 */
+    submitForm: function() {
+      this.$refs["form"].validate(valid => {
+        if (valid) {
+          if (this.form.uid != undefined) {
+            updateUser(this.form).then(response => {
+              if(response.code==200){
+                this.$message.success(response.msg)
+                this.open = false;
+                this.getList();
+              }else{
+                this.$message.error(response.msg)
+              }
+            });
+          } else {
+            addUser(this.form).then(response => {
+              if(response.code==200){
+                this.$message.success(response.msg)
+                this.open = false;
+                this.getList();
+              }else{
+                this.$message.error(response.msg)
+              }
+            });
+          }
+        }
+      });
+    },
+    /** 删除按钮操作 */
+    handleDelete(row) {
+      const userIds = row.id || this.ids;
+      this.$confirm('是否确认删除用户编号为"' + userIds + '"的数据项?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          return delUser(userIds);
+        }).then(() => {
+          this.getList();
+          this.msgSuccess("删除成功");
+        }).catch(() => {});
+    }
+  }
+};
+</script>

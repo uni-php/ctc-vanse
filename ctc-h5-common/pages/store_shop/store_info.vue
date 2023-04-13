@@ -1,0 +1,151 @@
+<template>
+	<view class="container">
+		<u--form
+			labelPosition="left"
+			labelWidth="80"
+			:model="storeInfo"
+			ref="form"
+		>
+		<u-form-item
+			label="门店名称"
+			prop="store_name"
+			borderBottom
+			ref="item1"
+		>
+			<u--input
+				v-model="storeInfo.store_name"
+				placeholder=""
+				border="none"
+			></u--input>
+		</u-form-item>
+		<u-form-item
+			label="门店编号"
+			prop="store_code"
+			borderBottom
+			ref="item1"
+		>
+			<u--input
+				v-model="storeInfo.store_code"
+				placeholder=""
+				border="none"
+			></u--input>
+		</u-form-item>
+			<u-form-item
+				label="门店位置"
+				prop="location"
+				borderBottom
+				ref="item1"
+			>
+				<u--input
+					v-model="storeInfo.location"
+					placeholder=""
+					border="none"
+				></u--input>
+			</u-form-item>
+			<u-form-item
+				label="门店电话"
+				prop="mobile_phone"
+				borderBottom
+				ref="item1"
+			>
+				<u--input
+					v-model="storeInfo.mobile_phone"
+					placeholder=""
+					border="none"
+				></u--input>
+			</u-form-item>
+			<u-form-item
+				label="门店手机号"
+				prop="telephone"
+				borderBottom
+				ref="item1"
+			>
+				<u--input
+					v-model="storeInfo.telephone"
+					disabled
+					disabledColor="#ffffff"
+					placeholder=""
+					border="none"
+				></u--input>
+			</u-form-item>
+			<u-form-item
+				label="负责人"
+				prop="person"
+				borderBottom
+				ref="item1"
+			>
+				<u--input
+					v-model="storeInfo.person"
+					disabled
+					disabledColor="#ffffff"
+					placeholder=""
+					border="none"
+				></u--input>
+			</u-form-item>
+			<u-form-item
+				label="人均价格"
+				prop="average_price"
+				borderBottom
+				ref="item1"
+			>
+				<u--input
+					v-model="storeInfo.average_price"
+					border="none"
+				></u--input>
+			</u-form-item>
+			<u-form-item
+				label="营业时间"
+				prop="time"
+				borderBottom
+				ref="item1"
+			>
+				<u--input
+					v-model="storeInfo.time"
+					border="none"
+				></u--input>
+			</u-form-item>
+		</u--form>
+	</view>
+</template>
+
+<script>
+	import {getStoreInfo} from '@/api/app/store_shop/index.js'
+	export default{
+		data(){
+			return{
+				dealer_id:'',
+				store_id:'',
+				storeInfo:{}
+			}
+		},
+		onLoad({dealer_id,store_id}) {
+			this.store_id=store_id
+			this.dealer_id=dealer_id
+		},
+		onShow() {
+			this.getStoreInfo()
+		},
+		methods:{
+			getStoreInfo(){
+				const params={
+					store_id:this.store_id,
+					dealer_id:this.dealer_id
+				}
+				getStoreInfo(params).then(res=>{
+					this.storeInfo=res.data
+					this.storeInfo.time=JSON.parse(res.data.time).join('至')
+					this.storeInfo.location=res.data.province+res.data.city+res.data.district+res.data.address
+				})
+			}
+		}
+	}
+</script>
+
+<style lang="scss" scoped>
+	.container{
+		width: 100%;
+		padding: 20rpx;
+		box-sizing: border-box;
+		height: auto;
+	}
+</style>

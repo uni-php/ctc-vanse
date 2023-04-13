@@ -1,0 +1,20 @@
+{
+  "name": "ctc-h5-common",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dayjs": "^1.11.7",
+    "jweixin-module": "^1.6.0",
+    "uview-ui": "^2.0.20",
+    "vue-jsonp": "^2.0.0",
+    "weixin-js-sdk": "^1.6.0",
+    "weixin-jsapi": "^1.1.0"
+  }
+}
